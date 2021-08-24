@@ -1,5 +1,3 @@
-import json
-
 import CloudFlare
 import os
 from loguru import logger
