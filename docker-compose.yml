@@ -4,6 +4,7 @@ services:
   extdns:
     image: dntskdev/extdns:latest
     container_name: "extdns"
+    restart: always
     environment:
       - CF_TOKEN=YourCloudFlareToken
     volumes:
