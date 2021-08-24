@@ -10,7 +10,8 @@ from modules import cf
 sleep_timeout = os.getenv('SLEEP_TIMEOUT', 300)
 
 use_ssh_client = False
-if os.getenv("DOCKER_HOST").startswith("ssh://"):
+docker_host = os.getenv("DOCKER_HOST", None)
+if docker_host and docker_host.startswith("ssh://"):
     use_ssh_client = True
 
 client = docker.from_env(use_ssh_client=use_ssh_client)
