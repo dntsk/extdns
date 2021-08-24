@@ -10,14 +10,17 @@ from modules import cf
 sleep_timeout = os.getenv('SLEEP_TIMEOUT', 300)
 
 use_ssh_client = False
-docker_host = os.getenv("DOCKER_HOST", None)
+docker_host = os.getenv('DOCKER_HOST', None)
 if docker_host and docker_host.startswith("ssh://"):
     use_ssh_client = True
 
 client = docker.from_env(use_ssh_client=use_ssh_client)
 
 while True:
-    ip = requests.get(url='https://ifconfig.me/ip').text
+    ip = os.getenv('EXTERNAL_IP', None)
+    if ip is None:
+        ip = requests.get(url='https://ifconfig.me/ip').text
+
     records_list = {}
 
     for c in client.containers.list():
