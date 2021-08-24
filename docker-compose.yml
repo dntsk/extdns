@@ -1,0 +1,10 @@
+version: '3.0'
+
+services:
+  extdns:
+    image: dntskdev/extdns:latest
+    container_name: "extdns"
+    environment:
+      - CF_TOKEN=YourCloudFlareToken
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
