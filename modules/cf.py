@@ -46,17 +46,18 @@ def update(docker_records_list, ip):
 
 
 def _set_extdns_record(zone_id, control_record_id, controlled_records):
-    if len(controlled_records) > 0:
-        extdns_record = ','.join(controlled_records)
-        data = {'name': '_extdns', 'type': 'TXT', 'content': f'{extdns_record}'}
+    extdns_record = ','.join(controlled_records)
+    data = {'name': '_extdns', 'type': 'TXT', 'content': f'{extdns_record}'}
 
-        if control_record_id:
+    if control_record_id:
+        if len(controlled_records) > 0:
             logger.info(f'CONTROL: control record found. Updating one with list of records: {extdns_record}')
-            cf.zones.dns_records.put(zone_id, control_record_id, data=data)
-        else:
+        cf.zones.dns_records.put(zone_id, control_record_id, data=data)
+    else:
+        if len(controlled_records) > 0:
             logger.info(f'CONTROL: control record not found ({control_record_id}). Creating one with list of '
                         f'records: {extdns_record}')
-            cf.zones.dns_records.post(zone_id, data=data)
+        cf.zones.dns_records.post(zone_id, data=data)
 
 
 def _cleanup(zone_id, old_records, controlled_records, records):
@@ -79,7 +80,7 @@ def _cf_connect():
 
 def _get_dns_records(zone_id):
     try:
-        return cf.zones.dns_records.get(zone_id, params={'per_page':100})
+        return cf.zones.dns_records.get(zone_id, params={'per_page': 100})
     except CloudFlare.exceptions.CloudFlareAPIError as e:
         exit('/zones/dns_records.get %d %s - api call failed' % (e, e))
 
