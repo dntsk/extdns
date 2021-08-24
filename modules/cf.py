@@ -14,22 +14,27 @@ def update(docker_records_list, ip):
         controlled_records = []
         control_record_id = None
         old_records = None
+        perform_actions = False
         records = _get_dns_records(zone_id)
         logger.info(f'INFO: got list of all records for {zone["name"]}')
 
         for record in docker_records_list['cf']:
             data = {'name': record, 'type': 'A', 'content': ip, 'ttl': ttl, 'proxied': True}
             if record.endswith(zone['name']):
+                perform_actions = True
                 found = False
                 for cf_record in records:
-                    if record.strip() == cf_record['name'].strip():
+                    if record.strip() == cf_record['name'].strip() and cf_record['type'] == 'A':
                         found = True
                         old_ip_address = cf_record['content']
                         controlled_records.append(record)
 
                         if ip != old_ip_address:
-                            cf.zones.dns_records.put(zone_id, cf_record['id'], data=data)
-                            logger.info(f'UPDATED: {record} with IP address {ip}')
+                            try:
+                                cf.zones.dns_records.put(zone_id, cf_record['id'], data=data)
+                                logger.info(f'UPDATED: {record} with IP address {ip}')
+                            except CloudFlare.exceptions.CloudFlareAPIError as e:
+                                logger.info(f'UNCHANGED: {record} already exists with IP address {ip}')
                         else:
                             logger.info(f'UNCHANGED: {record} already has IP address {ip}')
 
@@ -41,8 +46,9 @@ def update(docker_records_list, ip):
                     cf.zones.dns_records.post(zone_id, data=data)
                     logger.info(f'CREATED: {record} with IP address {ip}')
 
-        _set_extdns_record(zone_id, control_record_id, controlled_records)
-        _cleanup(zone_id, old_records, controlled_records, records)
+        if perform_actions:
+            _set_extdns_record(zone_id, control_record_id, controlled_records)
+            _cleanup(zone_id, old_records, controlled_records, records)
 
 
 def _set_extdns_record(zone_id, control_record_id, controlled_records):
