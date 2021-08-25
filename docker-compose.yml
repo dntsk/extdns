@@ -20,4 +20,4 @@ services:
         max-size: "10m"
         max-file: "5"
     labels:
-      - "extdns.cf.nginx.hostname=examble.com"
+      - "extdns.cf.nginx.hostname=example.com"
