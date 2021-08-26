@@ -9,6 +9,11 @@ services:
       - CF_TOKEN=YourCloudFlareToken
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   nginx:
     container_name: nginx
@@ -21,3 +26,8 @@ services:
         max-file: "5"
     labels:
       - "extdns.cf.nginx.hostname=example.com"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
