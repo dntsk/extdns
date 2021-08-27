@@ -52,7 +52,6 @@ def update(docker_records_list, ip):
 
 
 def _set_extdns_record(zone_id, control_record_id, controlled_records):
-    instance_id = os.getenv('INSTANCE_ID', 0)
 
     extdns_record = ','.join(controlled_records)
     data = {'name': f'_extdns_{instance_id}', 'type': 'TXT', 'content': f'{extdns_record}'}
@@ -102,4 +101,5 @@ def _get_zones():
         exit('/zones.get - %s - api call failed' % (e))
 
 
+instance_id = os.getenv('INSTANCE_ID', 0)
 cf = _cf_connect()
