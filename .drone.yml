@@ -105,6 +105,7 @@ steps:
 
 depends_on:
   - build
+  - build_site
 
 trigger:
   branch:
