@@ -38,7 +38,7 @@ def update(docker_records_list, ip):
                         else:
                             logger.info(f'UNCHANGED: {record} already has IP address {ip}')
 
-                    if cf_record['name'].strip() == f'_extdns.{zone["name"]}'.strip():
+                    if cf_record['name'].strip() == f'_extdns_{instance_id}.{zone["name"]}'.strip():
                         old_records = cf_record['content'].split(',')
                         control_record_id = cf_record['id']
 
