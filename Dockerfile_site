@@ -1,0 +1,13 @@
+FROM python:3.9-alpine as builder
+WORKDIR /opt
+RUN apk add --no-cache --virtual .build-deps build-base \
+    zlib-dev libjpeg libffi-dev openssl-dev \
+    && pip install mkdocs mkdocs-material \
+    && apk add --virtual rundeps $runDeps
+COPY mkdocs.yml /opt/
+COPY . ./
+RUN mkdocs build
+
+FROM nginx:latest
+RUN rm -rf /usr/share/nginx/html/*
+COPY --from=builder /opt/site /usr/share/nginx/html

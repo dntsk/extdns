@@ -14,9 +14,11 @@ The following table clarifies the current status of the providers according to t
 | -------------- | ------ | ----------- |
 | CloudFlare DNS | Beta   |             |
 
-## Running ExternalDNS:
+## Running ExternalDNS
 
-Use `docker-compose.yml` as an example to run your copy of ExtDNS.
+To run your ExtDNS you just need to spinup container with needed environment variables and set labels to your docker container.
+
+Use `docker-compose.yml` as an example.
 
 ## Environment variables
 
