@@ -4,7 +4,6 @@ RUN apk add --no-cache --virtual .build-deps build-base \
     zlib-dev libjpeg libffi-dev openssl-dev \
     && pip install mkdocs mkdocs-material \
     && apk add --virtual rundeps $runDeps
-COPY mkdocs.yml /opt/
 COPY . ./
 RUN mkdocs build
 
