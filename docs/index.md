@@ -30,6 +30,7 @@ Use `docker-compose.yml` as an example.
 
 | Environment variable | Default value | Description |
 |----------------------|---------------|-------------|
+| INSTANCE_ID          | 0             | An instance id to be sure several instances can work with same domain
 | CF_TOKEN             |               | CloudFlare token. How to obtain it [read here](https://developers.cloudflare.com/api/tokens/create). It needs `Zone.Zone`, `Zone.DNS` permissions to read and update records
 | TTL                  | 60            | TTL in seconds for newly created and updated DNS records
 | SLEEP_TIMEOUT        | 300           | Sleep time between check and update records

@@ -52,8 +52,10 @@ def update(docker_records_list, ip):
 
 
 def _set_extdns_record(zone_id, control_record_id, controlled_records):
+    instance_id = os.getenv('INSTANCE_ID', 0)
+
     extdns_record = ','.join(controlled_records)
-    data = {'name': '_extdns', 'type': 'TXT', 'content': f'{extdns_record}'}
+    data = {'name': f'_extdns_{instance_id}', 'type': 'TXT', 'content': f'{extdns_record}'}
 
     if control_record_id:
         if len(controlled_records) > 0:
