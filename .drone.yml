@@ -1,6 +1,39 @@
 ---
 kind: pipeline
 type: docker
+name: build-by-tag
+
+steps:
+  - name: build
+    image: docker
+    commands:
+      - docker build -t dntskdev/extdns:${DRONE_TAG} .
+      - docker push dntskdev/extdns:${DRONE_TAG}
+    volumes:
+      - name: cache
+        path: /root/.cache/pip
+      - name: docker_sock
+        path: /var/run/docker.sock
+      - name: docker_config
+        path: /root/.docker
+volumes:
+  - name: cache
+    host:
+      path: /opt/docker/drone/cache
+  - name: docker_sock
+    host:
+      path: /var/run/docker.sock
+  - name: docker_config
+    host:
+      path: /root/.docker
+
+trigger:
+  ref:
+    - refs/tags/v*
+
+---
+kind: pipeline
+type: docker
 name: build
 
 steps:
