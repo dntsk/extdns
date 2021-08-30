@@ -23,8 +23,8 @@ steps:
   - name: tag
     image: docker
     commands:
-      - docker build -t dntskdev/extdns:${DRONE_TAG} .
-      - docker push dntskdev/extdns:${DRONE_TAG}
+      - "docker build -t dntskdev/extdns:${DRONE_TAG} ."
+      - "docker push dntskdev/extdns:${DRONE_TAG}"
     volumes:
       - name: cache
         path: /root/.cache/pip
