@@ -19,7 +19,7 @@ client = docker.from_env(use_ssh_client=use_ssh_client)
 while True:
     ip = os.getenv('EXTERNAL_IP', None)
     if ip is None:
-        ip = requests.get(url='https://ifconfig.me/ip').text
+        ip = requests.get(url='https://ifconfig.me/ip', timeout=10).text
 
     records_list = {}
 
