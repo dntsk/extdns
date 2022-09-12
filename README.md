@@ -17,3 +17,8 @@ Also you can view it on [official website](https://extdns.dntsk.dev).
 If you want to report a bug or request a new feature. Free feel to open a new issue or pull request.
 
 English proofreading is needed too, because my grammar is not that great sadly. Feel free to correct my grammar in this Readme or source code.
+
+
+### Infrastructure model
+
+![Infrastructure model](.infragenie/infrastructure_model.png)
