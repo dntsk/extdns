@@ -90,7 +90,7 @@ def _cf_connect():
 
 def _get_dns_records(zone_id):
     try:
-        return cf.zones.dns_records.get(zone_id, params={'per_page': 100})
+        return cf.zones.dns_records.get(zone_id, params={'per_page': 100, "type": "A"})
     except CloudFlare.exceptions.CloudFlareAPIError as e:
         exit('/zones/dns_records.get %d %s - api call failed' % (e, e))
 
