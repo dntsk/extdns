@@ -46,8 +46,11 @@ def update(docker_records_list, ip):
                         control_record_id = cf_record['id']
 
                 if not found:
-                    cf.zones.dns_records.post(zone_id, data=data)
-                    logger.info(f'CREATED: {record} with IP address {ip}')
+                    try:
+                        cf.zones.dns_records.post(zone_id, data=data)
+                        logger.info(f'CREATED: {record} with IP address {ip}')
+                    except:
+                        logger.error(f'ERROR: {record} ALREADY EXISTS!!!')
 
         if perform_actions:
             _set_extdns_record(zone_id, control_record_id, controlled_records)
