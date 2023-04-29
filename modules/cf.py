@@ -62,15 +62,15 @@ def _set_extdns_record(zone_id, control_record_id, controlled_records):
     extdns_record = ','.join(controlled_records)
     data = {'name': f'_extdns_{instance_id}', 'type': 'TXT', 'content': f'{extdns_record}'}
 
-    if control_record_id:
-        if len(controlled_records) > 0:
-            logger.info(f'CONTROL: control record found. Updating one with list of records: {extdns_record}')
-        cf.zones.dns_records.put(zone_id, control_record_id, data=data)
-    else:
-        if len(controlled_records) > 0:
-            logger.info(f'CONTROL: control record not found ({control_record_id}). Creating one with list of '
-                        f'records: {extdns_record}')
-        cf.zones.dns_records.post(zone_id, data=data)
+    # if control_record_id:
+    #     if len(controlled_records) > 0:
+    #         logger.info(f'CONTROL: control record found. Updating one with list of records: {extdns_record}')
+    #     cf.zones.dns_records.put(zone_id, control_record_id, data=data)
+    # else:
+    #     if len(controlled_records) > 0:
+    #         logger.info(f'CONTROL: control record not found ({control_record_id}). Creating one with list of '
+    #                     f'records: {extdns_record}')
+    #     cf.zones.dns_records.post(zone_id, data=data)
 
 
 def _cleanup(zone_id, old_records, controlled_records, records):
