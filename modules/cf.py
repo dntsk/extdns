@@ -1,111 +1,173 @@
-import CloudFlare
+# import CloudFlare
+from cloudflare import Cloudflare, APIError
 import os
 from loguru import logger
 
 
-def update(docker_records_list, ip):
-    ttl = os.getenv('TTL', 60)
+def update_dns_records(dns_updates):
+    """Update DNS records in Cloudflare"""
+    if 'cf' not in dns_updates or not dns_updates['cf']:
+        logger.info('No DNS records to update')
+        return
+        
+    dns_ttl = int(os.getenv('DNS_TTL', 600))
+    cf_client = _get_cloudflare_client()
+    if not cf_client:
+        return
+        
+    stats = {'created': 0, 'updated': 0, 'unchanged': 0, 'ip_changed': 0}
 
-    zones = _get_zones()
-    logger.info('INFO: got list of all zones')
+    try:
+        # Get all zones
+        cf_zones = cf_client.zones.list().result
+        logger.info('Retrieving Cloudflare zone list')
 
-    for zone in zones:
-        zone_id = zone['id']
-        controlled_records = []
-        control_record_id = None
-        old_records = None
-        perform_actions = False
-        records = _get_dns_records(zone_id)
-        logger.info(f'INFO: got list of all records for {zone["name"]}')
+        for zone in cf_zones:
+            zone_id = zone.id
+            zone_name = zone.name
+            
+            # Get all records for this zone
+            zone_records = cf_client.dns.records.list(zone_id=zone_id).result
+            logger.info(f'Retrieving DNS records for zone {zone_name}')
 
-        for record in docker_records_list['cf']:
-            data = {'name': record, 'type': 'A', 'content': ip, 'ttl': ttl, 'proxied': True}
-            if record.endswith(zone['name']):
-                perform_actions = True
-                found = False
-                for cf_record in records:
-                    if record.strip() == cf_record['name'].strip() and cf_record['type'] == 'A':
-                        found = True
-                        old_ip_address = cf_record['content']
-                        controlled_records.append(record)
-
-                        if ip != old_ip_address:
+            # Process each record that needs updating
+            for dns_record in dns_updates['cf']:
+                domain_name = dns_record['domain']
+                target_ip = dns_record['ip']
+                enable_proxy = dns_record.get('proxied', False)
+                
+                # Check if domain belongs to current zone
+                if not domain_name.endswith(zone_name):
+                    continue
+                    
+                # Check if record already exists
+                record_exists = False
+                for cf_record in zone_records:
+                    if domain_name.strip() == cf_record.name.strip() and cf_record.type == 'A':
+                        record_exists = True
+                        needs_update = False
+                        
+                        # Check if IP needs updating
+                        if target_ip != cf_record.content:
+                            logger.info(f'IP address change detected: {domain_name} from {cf_record.content} to {target_ip}')
+                            needs_update = True
+                            stats['ip_changed'] += 1
+                            
+                        # Check if Cloudflare proxy status needs updating  
+                        if enable_proxy != cf_record.proxied:
+                            logger.info(f'Cloudflare proxy status change detected: {domain_name} from {cf_record.proxied} to {enable_proxy}')
+                            needs_update = True
+                        
+                        # Update record if needed
+                        if needs_update:
                             try:
-                                cf.zones.dns_records.put(zone_id, cf_record['id'], data=data)
-                                logger.info(f'UPDATED: {record} with IP address {ip}')
-                            except CloudFlare.exceptions.CloudFlareAPIError as e:
-                                logger.info(f'UNCHANGED: {record} already exists with IP address {ip}')
+                                cf_client.dns.records.update(
+                                    zone_id=zone_id, 
+                                    dns_record_id=cf_record.id,
+                                    type='A',
+                                    name=domain_name,
+                                    content=target_ip,
+                                    ttl=dns_ttl,
+                                    proxied=enable_proxy
+                                )
+                                logger.info(f'Successfully updated DNS record: {domain_name} -> {target_ip}, Cloudflare proxy={enable_proxy}')
+                                stats['updated'] += 1
+                            except APIError as e:
+                                logger.error(f'Failed to update DNS record {domain_name}: {e}')
                         else:
-                            logger.info(f'UNCHANGED: {record} already has IP address {ip}')
+                            stats['unchanged'] += 1
+                        break
 
-                    if cf_record['name'].strip() == f'_extdns_{instance_id}.{zone["name"]}'.strip():
-                        try:
-                            old_records = cf_record['content'].split(',')
-                        except KeyError:
-                            old_records = []
-                        control_record_id = cf_record['id']
-
-                if not found:
+                # Create new record if it doesn't exist
+                if not record_exists:
                     try:
-                        cf.zones.dns_records.post(zone_id, data=data)
-                        logger.info(f'CREATED: {record} with IP address {ip}')
-                    except:
-                        logger.error(f'ERROR: {record} ALREADY EXISTS!!!')
+                        cf_client.dns.records.create(
+                            zone_id=zone_id,
+                            type='A',
+                            name=domain_name,
+                            content=target_ip,
+                            ttl=dns_ttl,
+                            proxied=enable_proxy
+                        )
+                        logger.info(f'Successfully created DNS record: {domain_name} -> {target_ip}, Cloudflare proxy={enable_proxy}')
+                        stats['created'] += 1
+                    except APIError as e:
+                        logger.error(f'Failed to create DNS record {domain_name}: {e}')
+        
+        # Log operation summary
+        if stats['created'] > 0 or stats['updated'] > 0 or stats['unchanged'] > 0:
+            logger.info(f'DNS record operation summary: Created {stats["created"]}, Updated {stats["updated"]} (IP changes: {stats["ip_changed"]}), Unchanged {stats["unchanged"]}')
 
-        # if perform_actions:
-            # _set_extdns_record(zone_id, control_record_id, controlled_records)
-            # _cleanup(zone_id, old_records, controlled_records, records)
-
-
-def _set_extdns_record(zone_id, control_record_id, controlled_records):
-
-    extdns_record = ','.join(controlled_records)
-    data = {'name': f'_extdns_{instance_id}', 'type': 'TXT', 'content': f'{extdns_record}'}
-
-    # if control_record_id:
-    #     if len(controlled_records) > 0:
-    #         logger.info(f'CONTROL: control record found. Updating one with list of records: {extdns_record}')
-    #     cf.zones.dns_records.put(zone_id, control_record_id, data=data)
-    # else:
-    #     if len(controlled_records) > 0:
-    #         logger.info(f'CONTROL: control record not found ({control_record_id}). Creating one with list of '
-    #                     f'records: {extdns_record}')
-    #     cf.zones.dns_records.post(zone_id, data=data)
-
-
-def _cleanup(zone_id, old_records, controlled_records, records):
-    if old_records:
-        cleanup_records = list(set(old_records) - set(controlled_records))
-        if len(cleanup_records) > 0:
-            logger.info(f'CLEANUP: records to delete: {cleanup_records}')
-            for r in records:
-                if r['name'].strip() in cleanup_records:
-                    cf.zones.dns_records.delete(zone_id, r['id'])
-                    logger.info(f'CLEANUP: record {r["name"]} ({r["id"]}) was removed')
-
-
-def _cf_connect():
-    cf_token = os.getenv('CF_TOKEN', None)
-    if cf_token is None:
-        exit('No CloudFlare credentials found!')
-    return CloudFlare.CloudFlare(token=cf_token)
-
-
-def _get_dns_records(zone_id):
-    try:
-        return cf.zones.dns_records.get(zone_id, params={'per_page': 100, "type": "A"})
-    except CloudFlare.exceptions.CloudFlareAPIError as e:
-        exit('/zones/dns_records.get %d %s - api call failed' % (e, e))
-
-
-def _get_zones():
-    try:
-        return cf.zones.get()
-    except CloudFlare.exceptions.CloudFlareAPIError as e:
-        exit('/zones.get %d %s - api call failed' % (e, e))
+    except APIError as e:
+        logger.error(f'Cloudflare API error: {e}')
     except Exception as e:
-        exit('/zones.get - %s - api call failed' % (e))
+        logger.error(f'Error processing DNS records: {e}')
 
 
-instance_id = os.getenv('INSTANCE_ID', 0)
-cf = _cf_connect()
+def delete_dns_records(domains_to_delete):
+    """Delete DNS records from Cloudflare"""
+    if not domains_to_delete:
+        return
+    
+    cf_client = _get_cloudflare_client()
+    if not cf_client:
+        return
+    
+    deleted_count = 0
+    failed_count = 0
+    
+    try:
+        # Get all zones
+        cf_zones = cf_client.zones.list().result
+        
+        for domain_name in domains_to_delete:
+            logger.info(f'Attempting to delete DNS record: {domain_name}')
+            domain_deleted = False
+            
+            # Find zone for this domain
+            for zone in cf_zones:
+                zone_name = zone.name
+                if not domain_name.endswith(zone_name):
+                    continue
+                
+                zone_id = zone.id
+                
+                # Get all records for this zone
+                try:
+                    zone_records = cf_client.dns.records.list(zone_id=zone_id).result
+                    
+                    # Find matching records
+                    for record in zone_records:
+                        if record.name == domain_name and record.type == 'A':
+                            # Delete record
+                            try:
+                                cf_client.dns.records.delete(zone_id=zone_id, dns_record_id=record.id)
+                                logger.info(f'Successfully deleted DNS record: {domain_name}')
+                                domain_deleted = True
+                                deleted_count += 1
+                            except APIError as e:
+                                logger.error(f'Failed to delete DNS record {domain_name}: {e}')
+                                failed_count += 1
+                except APIError as e:
+                    logger.error(f'Failed to query DNS records for {domain_name}: {e}')
+                    failed_count += 1
+            
+            if not domain_deleted:
+                logger.warning(f'DNS record not found for deletion: {domain_name}')
+                
+        logger.info(f'DNS record deletion summary: Successfully deleted {deleted_count}, Failed to delete {failed_count}')
+                
+    except APIError as e:
+        logger.error(f'Cloudflare API deletion error: {e}')
+    except Exception as e:
+        logger.error(f'Error during DNS record deletion: {e}')
+
+
+def _get_cloudflare_client():
+    """Get Cloudflare API client instance"""
+    cf_token = os.getenv('CF_TOKEN')
+    if not cf_token:
+        logger.error('Cloudflare API Token not found in environment variables')
+        return None
+        
+    return Cloudflare(api_token=cf_token)

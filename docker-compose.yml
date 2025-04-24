@@ -1,33 +1,40 @@
-version: '3.0'
-
 services:
   extdns:
     image: dntskdev/extdns:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: "extdns"
     restart: always
-    environment:
-      - CF_TOKEN=YourCloudFlareToken
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "5"
+    environment:
+      - CF_TOKEN=${CF_TOKEN}                   # Cloudflare API Token
+      - DNS_TTL=600                            # DNS record TTL (seconds)
+      - DNS_UPDATE_INTERVAL=300                # DNS record check interval (seconds), too frequent checks may cause Cloudflare API rate limiting
+      - PUBLIC_IP_QUERY_URL=https://ifconfig.me/ip  # Public IP query URL
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data                       # Persistent data directory
 
+  # Example
   nginx:
-    container_name: nginx
     image: nginx:latest
+    container_name: nginx
     restart: always
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "5"
+    ports:
+      - "80:80"
     labels:
-      - "extdns.cf.nginx.hostname=example.com"
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
+      - "extdns.cf.nginx.fqdn=www.example.com"         # Fully Qualified Domain Name
+      - "extdns.cf.nginx.ip=192.168.1.11"              # Custom IP address
+      # - "extdns.cf.nginx.auto_ip=true"               # Auto-detect public IP (conflicts with custom IP setting)
+      - "extdns.cf.nginx.cloudflare_proxy=false"       # Cloudflare proxy setting, must be disabled for private IP addresses
+
