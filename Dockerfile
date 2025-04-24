@@ -1,9 +1,10 @@
-FROM python:3.9
+FROM python:3.12
 
-WORKDIR /opt
+WORKDIR /app
 
-COPY requirements.txt ./
-RUN pip install --no-cache -r requirements.txt
-COPY . ./
+COPY . .
+
+RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
 
 CMD ["python", "./server.py"]
+
