@@ -2,5 +2,5 @@ cloudflare==4.1.0
 docker==7.1.0
 loguru==0.7.3
 paramiko==3.5.1
-requests==2.32.3
+requests==2.32.4
 six==1.17.0
